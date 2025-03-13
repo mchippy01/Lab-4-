@@ -1,0 +1,249 @@
+---
+title: "Lab4Marx"
+format: html
+editor: visual
+---
+
+```{r}
+library(tidyverse)
+library(ggpubr)
+library(lterdatasampler)
+library(car)
+library(visdat)
+```
+
+Question 1
+
+```{r}
+# Filter data for Coastal Giant Salamander
+salamander_data <- and_vertebrates %>%
+  filter(species == "Coastal giant salamander") %>%
+  drop_na(section, unittype) 
+
+# Create a contingency table
+cont_table <- table(salamander_data$section, salamander_data$unittype)
+
+# View the contingency table
+print(cont_table)
+
+# Perform Chi-Square Test
+chi_test <- chisq.test(cont_table)
+
+# View results
+print(chi_test)
+
+
+```
+
+p-value\<0.05, we reject the null hypohtsis meaning that forest type and channel unit are sifnificantly associatioed
+
+Question 2
+
+```{r}
+# Filter data for Coastal Giant Salamander and remove NA values
+salamander_biomass <- and_vertebrates %>%
+  filter(species == "Coastal giant salamander") %>%
+  drop_na(weight_g, section)
+# Histogram to check normality visually
+ggpubr::ggarrange(
+  ggpubr::gghistogram(salamander_biomass %>% filter(section == "CC") %>% pull(weight_g), main = "Clear Cut"),
+  ggpubr::gghistogram(salamander_biomass %>% filter(section == "OG") %>% pull(weight_g), main = "Old Growth")
+)
+
+
+```
+
+```{r}
+# Perform Shapiro-Wilk Normality Test
+shapiro.test(salamander_biomass %>% filter(section == "CC") %>% pull(weight_g))
+shapiro.test(salamander_biomass %>% filter(section == "OG") %>% pull(weight_g))
+```
+
+since the p-value is less than 0.05, the data is not normallt distribued so we need t sue
+
+```{r}
+# Check variance equality
+var.test(
+  salamander_biomass %>% filter(section == "CC") %>% pull(weight_g),
+  salamander_biomass %>% filter(section == "OG") %>% pull(weight_g)
+)
+
+```
+
+```{r}
+# Run a t-test
+t_test <- t.test(weight_g ~ section, data = salamander_biomass, var.equal = FALSE)
+
+# View results
+print(t_test)
+
+
+```
+
+Found that salamanders had significantly higher weights in clear cut than old growth forests
+
+Question 3
+
+```{r}
+trout_data <- and_vertebrates %>%
+  filter(species == "Cutthroat trout") %>%
+  drop_na(length_1_mm, weight_g)
+trout_data500 <- trout_data |> 
+  slice_sample(n = 5000) 
+# Normality test
+shapiro.test(trout_data500$length_1_mm)
+shapiro.test(trout_data500$weight_g)
+
+
+```
+
+```{r}
+cor.test(trout_data$length_1_mm, trout_data$weight_g, method = "pearson")
+
+```
+
+```{r}
+cor.test(trout_data$length_1_mm, trout_data$weight_g, method = "spearman")
+
+```
+
+```{r}
+ggplot(trout_data, aes(x = length_1_mm, y = weight_g)) +
+  geom_point() +
+  geom_smooth(method = "lm", color = "blue") +
+  labs(title = "Cutthroat Trout Length vs Weight", x = "Length (mm)", y = "Weight (g)")
+
+```
+
+```{r}
+#install the car package
+??car
+
+# data set
+data("pie_crab")
+```
+
+Below is the code from the example part of the lab
+
+```{r}
+?and_vertebrates
+glimpse(and_vertebrates)
+vis_dat(and_vertebrates)
+
+
+```
+
+```{r}
+and_vertebrates |> 
+  filter(species == "Cutthroat trout") |> 
+  drop_na(unittype) |> 
+  count(unittype)
+```
+
+```{r}
+and_vertebrates |> 
+  filter(species == "Cutthroat trout") |> 
+  count(unittype)
+
+and_vertebrates |> 
+  filter(species == "Cutthroat trout") |> 
+  drop_na(unittype) |> 
+  count(unittype)
+```
+
+```{r}
+# First clean the dataset to create the contingency table from
+trout_clean <- and_vertebrates  |>  
+  #filter Cutthroat trout
+  filter(species == "Cutthroat trout") |> 
+  # lets test using just the 3 most abundant unittypes
+  filter(unittype %in% c("C", "P", "SC")) |> 
+  # drop NAs for both unittype and section
+  drop_na(unittype, section)
+
+cont_table <- table(trout_clean$section, trout_clean$unittype)
+
+chisq.test(cont_table)
+```
+
+```{r}
+trout_clean  |>  
+  count(unittype, section)  |>  
+  ggpubr::ggbarplot(x = 'unittype', y = 'n', 
+                    fill = 'section', 
+                    palette = c("#00AFBB", "#E7B800"),
+                    add = "mean_se") 
+```
+
+```{r}
+trout_clean |> 
+  drop_na(weight_g) |> 
+  ggpubr::ggviolin(x = "section", 
+                   y     = "weight_g", 
+                   add   = "boxplot",
+                   color = "section",
+                   palette = c("#00AFBB", "#E7B800")) 
+```
+
+```{r}
+cc_weight <- trout_clean |> 
+  filter(section == "CC") |> 
+  pull(weight_g)
+
+og_weight <- trout_clean |> 
+  filter(section == "OG") |> 
+  pull(weight_g)
+
+var.test(cc_weight, og_weight)
+```
+
+```{r}
+ggpubr::ggarrange(ggpubr::gghistogram(cc_weight, main = "Clear Cut"), 
+                  ggpubr::gghistogram(og_weight, main = "Old Growth"))
+```
+
+```{r}
+var.test(log(cc_weight), log(og_weight))
+```
+
+```{r}
+t.test(log(trout_clean$weight_g) ~ trout_clean$section, var.equal = TRUE)
+```
+
+```{r}
+t.test(trout_clean$weight_g ~ trout_clean$section, var.equal = FALSE)
+```
+
+```{r}
+sally_clean <- and_vertebrates |> 
+  filter(species == "Coastal giant salamander") |> 
+  drop_na(length_2_mm, weight_g)
+
+ggarrange(gghistogram(sally_clean$length_2_mm, title = "Length"),
+gghistogram(sally_clean$weight_g, title = "Weight"))
+
+s <- sally_clean |> 
+  slice_sample(n = 5000) 
+
+shapiro.test(s$length_2_mm)
+
+shapiro.test(s$weight_g)
+
+ggarrange(
+ gghistogram(log(sally_clean$length_2_mm), title = "Length"), 
+ gghistogram(log(sally_clean$weight_g), title = "Weight") )
+```
+
+```{r}
+cor.test(log(sally_clean$length_2_mm), log(sally_clean$weight_g))
+sally_clean |> 
+  mutate(log_length = log(length_2_mm), log_weight = log(weight_g)) |> 
+  ggscatter(x = 'log_length', 
+            y = 'log_weight', 
+            alpha = .35,
+            add = "loess")
+```
+
+```{r}
+cor.test(sally_clean$length_2_mm, sally_clean$weight_g, method = "spearman")
+```
