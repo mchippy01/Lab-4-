@@ -8,6 +8,8 @@ subtitle: 'Introduction to Statistics in R'
 editor: 
   markdown: 
     wrap: 72
+execute:
+  echo: true
 ---
 
 ```{r, include = F}
